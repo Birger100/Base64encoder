@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 const encodeUtf8ToBase64 = (text) => {
   const bytes = new TextEncoder().encode(text);
@@ -23,26 +23,32 @@ const App = () => {
   const [plainText, setPlainText] = useState('');
   const [base64Text, setBase64Text] = useState('');
   const [decodeError, setDecodeError] = useState('');
-  const [copiedField, setCopiedField] = useState('');
+  const [copyFeedback, setCopyFeedback] = useState({ field: '', message: '', isError: false });
   const timeoutRef = useRef(null);
 
-  const showCopied = (field) => {
-    setCopiedField(field);
+  useEffect(() => () => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+  }, []);
+
+  const showCopyFeedback = (field, message, isError = false) => {
+    setCopyFeedback({ field, message, isError });
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
 
     timeoutRef.current = setTimeout(() => {
-      setCopiedField('');
+      setCopyFeedback({ field: '', message: '', isError: false });
     }, 1200);
   };
 
   const copyToClipboard = async (value, field) => {
     try {
       await navigator.clipboard.writeText(value);
-      showCopied(field);
+      showCopyFeedback(field, 'Copied!');
     } catch (_error) {
-      setCopiedField('');
+      showCopyFeedback(field, 'Copy failed', true);
     }
   };
 
@@ -88,7 +94,9 @@ const App = () => {
             onDoubleClick={() => copyToClipboard(plainText, 'plain')}
             placeholder="Type or paste plain text..."
           />
-          <div style={styles.feedback}>{copiedField === 'plain' ? 'Copied!' : ''}</div>
+          <div style={{ ...styles.feedback, ...(copyFeedback.field === 'plain' && copyFeedback.isError ? styles.errorFeedback : null) }}>
+            {copyFeedback.field === 'plain' ? copyFeedback.message : ''}
+          </div>
         </section>
 
         <section style={styles.panel}>
@@ -110,7 +118,9 @@ const App = () => {
             onDoubleClick={() => copyToClipboard(base64Text, 'base64')}
             placeholder="Type or paste Base64..."
           />
-          <div style={styles.feedback}>{copiedField === 'base64' ? 'Copied!' : ''}</div>
+          <div style={{ ...styles.feedback, ...(copyFeedback.field === 'base64' && copyFeedback.isError ? styles.errorFeedback : null) }}>
+            {copyFeedback.field === 'base64' ? copyFeedback.message : ''}
+          </div>
           {decodeError ? <div style={styles.error}>{decodeError}</div> : null}
         </section>
       </div>
@@ -170,6 +180,9 @@ const styles = {
     minHeight: '1.1rem',
     color: '#059669',
     fontSize: '0.85rem',
+  },
+  errorFeedback: {
+    color: '#b45309',
   },
   error: {
     color: '#dc2626',
